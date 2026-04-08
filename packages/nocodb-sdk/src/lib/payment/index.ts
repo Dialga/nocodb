@@ -103,6 +103,7 @@ export enum PlanFeatureTypes {
   FEATURE_DATE_DEPENDENCY = 'feature_date_dependency',
   FEATURE_API_COMMENT_V3 = 'feature_api_comment_v3',
   FEATURE_API_WORKFLOW_MANAGEMENT = 'feature_api_workflow_management',
+  FEATURE_VIEW_PERMISSIONS = 'feature_view_permissions',
 }
 
 export enum PlanTitles {
@@ -362,6 +363,7 @@ export const PlanFeatureUpgradeMessages: Record<PlanFeatureTypes, string> = {
   [PlanFeatureTypes.FEATURE_DATE_DEPENDENCY]: 'to use date dependencies.',
   [PlanFeatureTypes.FEATURE_API_COMMENT_V3]: 'to use comment api.',
   [PlanFeatureTypes.FEATURE_API_WORKFLOW_MANAGEMENT]: 'to use workflow api.',
+  [PlanFeatureTypes.FEATURE_VIEW_PERMISSIONS]: 'to use view permissions.',
 };
 
 export const getUpgradeMessage = (

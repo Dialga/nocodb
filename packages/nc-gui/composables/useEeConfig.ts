@@ -174,6 +174,10 @@ export const useEeConfig = createSharedComposable(() => {
 
   const showUpgradeToUseTableAndFieldPermissions = (..._args: any[]) => {}
 
+  const blockViewPermissions = computed(() => true)
+
+  const showUpgradeToUseViewPermissions = (..._args: any[]) => {}
+
   const blockDocumentPermissions = computed(() => true)
 
   const showUpgradeToUseDocumentPermissions = (..._args: any[]) => {}
@@ -321,6 +325,8 @@ export const useEeConfig = createSharedComposable(() => {
     showUpgradeToUseCellColoring,
     blockTableAndFieldPermissions,
     showUpgradeToUseTableAndFieldPermissions,
+    blockViewPermissions,
+    showUpgradeToUseViewPermissions,
     blockDocumentPermissions,
     showUpgradeToUseDocumentPermissions,
     blockPrivateBases,
