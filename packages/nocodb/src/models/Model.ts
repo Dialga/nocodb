@@ -50,6 +50,11 @@ import { cleanBaseSchemaCacheForBase } from '~/helpers/scriptHelper';
 import { dataWrapper } from '~/helpers/dbHelpers';
 import { isEE } from '~/utils';
 import { NcCache } from '~/decorators/nc-cache.decorator';
+import {
+  getModelContext,
+  setModelContext,
+  throwMissingContext,
+} from '~/helpers/modelContext';
 
 const logger = new Logger('Model');
 
@@ -104,22 +109,35 @@ export default class Model implements TableType {
 
   synced?: boolean;
 
+  get context(): NcContext {
+    const ctx = getModelContext(this);
+    if (ctx) return ctx;
+    if (this.fk_workspace_id && this.base_id) {
+      return {
+        workspace_id: this.fk_workspace_id,
+        base_id: this.base_id,
+      } as NcContext;
+    }
+    throwMissingContext('Model');
+  }
+
   constructor(data: Partial<TableType | Model>) {
     Object.assign(this, data);
   }
 
-  public static castType(data: Model): Model {
-    return data && new Model(data);
+  public static castType(data: Model, context?: NcContext): Model {
+    const instance = data && new Model(data);
+    if (instance && context) setModelContext(instance, context);
+    return instance;
   }
 
   public async getColumns(
-    context: NcContext,
     ncMeta = Noco.ncMeta,
     defaultViewId = undefined,
     updateColumns = true,
   ): Promise<Column[]> {
     const columns = await Column.list(
-      context,
+      this.context,
       {
         fk_model_id: this.id,
         fk_default_view_id: defaultViewId,
@@ -139,32 +157,25 @@ export default class Model implements TableType {
     return this.columns;
   }
 
-  public async getColumnsHash(
-    context: NcContext,
-    ncMeta = Noco.ncMeta,
-  ): Promise<string> {
-    const columns = await this.getColumns(context, ncMeta, undefined, false);
+  public async getColumnsHash(ncMeta = Noco.ncMeta): Promise<string> {
+    const columns = await this.getColumns(ncMeta, undefined, false);
 
     return (this.columnsHash = hash(columns));
   }
 
   // get columns cached under the instance or fetch from db/redis cache
-  public async getCachedColumns(
-    context: NcContext,
-    ncMeta = Noco.ncMeta,
-  ): Promise<Column[]> {
+  public async getCachedColumns(ncMeta = Noco.ncMeta): Promise<Column[]> {
     if (this.columns) return this.columns;
-    return this.getColumns(context, ncMeta);
+    return this.getColumns(ncMeta);
   }
 
   // @ts-ignore
   public async getViews(
-    context: NcContext,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     force = false,
     ncMeta = Noco.ncMeta,
   ): Promise<View[]> {
-    this.views = await View.listWithInfo(context, this.id, ncMeta);
+    this.views = await View.listWithInfo(this.context, this.id, ncMeta);
     return this.views;
   }
 
@@ -390,7 +401,7 @@ export default class Model implements TableType {
         (b.order != null ? b.order : Infinity),
     );
 
-    return modelList.map((m) => this.castType(m));
+    return modelList.map((m) => this.castType(m, context));
   }
 
   public static async listWithInfo(
@@ -428,7 +439,7 @@ export default class Model implements TableType {
       await NocoCache.setList(context, CacheScope.MODEL, [base_id], modelList);
     }
 
-    return modelList.map((m) => this.castType(m));
+    return modelList.map((m) => this.castType(m, context));
   }
 
   @NcCache({
@@ -465,7 +476,7 @@ export default class Model implements TableType {
         );
       }
     }
-    return this.castType(modelData);
+    return this.castType(modelData, context);
   }
 
   @NcCache({
@@ -520,7 +531,7 @@ export default class Model implements TableType {
         `${CacheScope.MODEL}:${modelData.id}`,
         modelData,
       );
-      return this.castType(modelData);
+      return this.castType(modelData, context);
     }
     return null;
   }
@@ -581,17 +592,17 @@ export default class Model implements TableType {
       // modelData.sorts = await Sort.list({ modelId: modelData.id });
     }
     if (modelData) {
-      const m = this.castType(modelData);
+      const m = this.castType(modelData, context);
 
-      await m.getViews(context, false, ncMeta);
+      await m.getViews(false, ncMeta);
 
       const defaultViewId = getFirstNonPersonalView(m.views, {
         includeViewType: ViewTypes.GRID,
       })?.id;
 
-      await m.getColumns(context, ncMeta, defaultViewId);
+      await m.getColumns(ncMeta, defaultViewId);
 
-      await m.getColumnsHash(context, ncMeta);
+      await m.getColumnsHash(ncMeta);
 
       return m;
     }
@@ -666,15 +677,12 @@ export default class Model implements TableType {
     });
   }
 
-  async delete(
-    context: NcContext,
-    ncMeta = Noco.ncMeta,
-    force = false,
-  ): Promise<boolean> {
+  async delete(ncMeta = Noco.ncMeta, force = false): Promise<boolean> {
+    const context = this.context;
     await Comment.deleteModelComments(context, this.id, ncMeta);
 
-    for (const view of await this.getViews(context, true, ncMeta)) {
-      await view.delete(context, ncMeta);
+    for (const view of await this.getViews(true, ncMeta)) {
+      await view.delete(ncMeta);
     }
 
     // delete associated hooks
@@ -686,7 +694,7 @@ export default class Model implements TableType {
       await Hook.delete(context, hook.id, ncMeta);
     }
 
-    for (const col of await this.getColumns(context, ncMeta)) {
+    for (const col of await this.getColumns(ncMeta)) {
       let colOptionTableName = null;
       let cacheScopeName = null;
       switch (col.uidt) {
@@ -846,7 +854,6 @@ export default class Model implements TableType {
   }
 
   async mapAliasToColumn(
-    context: NcContext,
     data,
     clientMeta = {
       isMySQL: false,
@@ -858,7 +865,7 @@ export default class Model implements TableType {
   ) {
     const dbDataWrapper = dataWrapper(data);
     const insertObj = {};
-    for (const col of columns || (await this.getColumns(context))) {
+    for (const col of columns || (await this.getColumns())) {
       if (isVirtualCol(col)) continue;
       let val = dbDataWrapper.getByColumnNameTitleOrId(col);
       if (val !== undefined) {
@@ -866,7 +873,7 @@ export default class Model implements TableType {
           val = JSON.stringify(val);
         }
         if (
-          context.api_version !== NcApiVersion.V3 &&
+          this.context.api_version !== NcApiVersion.V3 &&
           col.uidt === UITypes.DateTime &&
           dayjs(val).isValid()
         ) {
@@ -929,10 +936,10 @@ export default class Model implements TableType {
     return insertObj;
   }
 
-  async mapColumnToAlias(context: NcContext, data, columns?: Column[]) {
+  async mapColumnToAlias(data, columns?: Column[]) {
     const res = {};
     const dbDataWrapper = dataWrapper(data);
-    for (const col of columns || (await this.getColumns(context))) {
+    for (const col of columns || (await this.getColumns())) {
       if (isVirtualCol(col)) continue;
       let val = dbDataWrapper.getByColumnNameTitleOrId(col);
       if (val !== undefined) {
@@ -995,12 +1002,11 @@ export default class Model implements TableType {
 
     // clear all the cached query under related models
     for (const col of await this.get(context, tableId).then((t) =>
-      t.getColumns(context),
+      t.getColumns(),
     )) {
       if (!isLinksOrLTAR(col)) continue;
 
       const colOptions = await col.getColOptions<LinkToAnotherRecordColumn>(
-        context,
         ncMeta,
       );
 
@@ -1041,8 +1047,8 @@ export default class Model implements TableType {
     return res;
   }
 
-  async getAliasColMapping(context: NcContext) {
-    return (await this.getColumns(context)).reduce((o, c) => {
+  async getAliasColMapping() {
+    return (await this.getColumns()).reduce((o, c) => {
       if (c.column_name) {
         o[c.title] = c.column_name;
       }
@@ -1050,8 +1056,8 @@ export default class Model implements TableType {
     }, {});
   }
 
-  async getColAliasMapping(context: NcContext) {
-    return (await this.getColumns(context)).reduce((o, c) => {
+  async getColAliasMapping() {
+    return (await this.getColumns()).reduce((o, c) => {
       if (c.column_name) {
         o[c.column_name] = c.title;
       }
@@ -1152,7 +1158,7 @@ export default class Model implements TableType {
       if (!isLinksOrLTAR(col)) continue;
       const colOptions = await col.getColOptions<
         LinkToAnotherRecordColumn | LinksColumn
-      >(context);
+      >();
       relatedModelIds.add(colOptions?.fk_related_model_id);
     }
 
@@ -1264,7 +1270,7 @@ export default class Model implements TableType {
         await NocoCache.set(context, cacheKey, model.id);
         await NocoCache.set(context, `${CacheScope.MODEL}:${model.id}`, model);
       }
-      return this.castType(model);
+      return this.castType(model, context);
     }
     return modelId && this.get(context, modelId);
   }
@@ -1339,8 +1345,8 @@ export default class Model implements TableType {
     ));
   }
 
-  async getAliasColObjMap(context: NcContext, columns?: Column[]) {
-    const mapColumns = columns || (await this.getColumns(context));
+  async getAliasColObjMap(columns?: Column[]) {
+    const mapColumns = columns || (await this.getColumns());
     const idReduce = mapColumns.reduce(
       (sortAgg, c) => ({ ...sortAgg, [c.id]: c }),
       {},

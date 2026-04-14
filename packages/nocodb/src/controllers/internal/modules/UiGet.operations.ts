@@ -259,6 +259,7 @@ export class UiGetOperations
         return await this.extensionsService.extensionRead(context, {
           extensionId: req.query.extensionId as string,
         });
+
     }
   }
 }

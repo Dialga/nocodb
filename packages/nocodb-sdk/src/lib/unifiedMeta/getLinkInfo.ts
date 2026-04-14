@@ -105,7 +105,7 @@ export const getLinkInfo = async (
         getMeta,
       });
       const targetJoinColumn = (
-        await targetModel.getColumns(targetContext)
+        await getColumns(targetContext, { model: targetModel })
       ).find((col) => joinIds.includes(col.id));
 
       return {
@@ -132,9 +132,9 @@ export const getLinkInfo = async (
         relationColOptions.fk_child_column_id,
         relationColOptions.fk_parent_column_id,
       ];
-      const sourceJoinColumn = (await sourceModel.getColumns(context)).find(
-        (col) => joinIds.includes(col.id)
-      );
+      const sourceJoinColumn = (
+        await getColumns(context, { model: sourceModel })
+      ).find((col) => joinIds.includes(col.id));
 
       const mmContext = {
         ...context,
@@ -143,7 +143,7 @@ export const getLinkInfo = async (
       const mmModel = await getMeta(mmContext, {
         id: relationColOptions.fk_mm_model_id,
       });
-      const mmColumns = await mmModel.getColumns(mmContext);
+      const mmColumns = await getColumns(mmContext, { model: mmModel });
       let mmSourceJoinColumn: UnifiedMetaType.IColumn;
       let mmTargetJoinColumn: UnifiedMetaType.IColumn;
       if (sourceJoinColumn.id === relationColOptions.fk_parent_column_id) {
@@ -166,11 +166,12 @@ export const getLinkInfo = async (
         ...context,
         base_id: relationColOptions.fk_related_base_id ?? context.base_id,
       };
-      const targetModel = await relationColOptions.getRelatedTable(
-        targetContext
-      );
+      const targetModel = await getLTARRelatedTable(targetContext, {
+        colOptions: relationColOptions,
+        getMeta,
+      });
       const targetJoinColumn = (
-        await targetModel.getColumns(targetContext)
+        await getColumns(targetContext, { model: targetModel })
       ).find((col) => joinIds.includes(col.id));
 
       return {

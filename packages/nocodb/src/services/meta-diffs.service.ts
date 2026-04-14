@@ -159,7 +159,7 @@ export class MetaDiffsService {
     });
 
     const colListRef = {};
-    const oldMetas = await source.getModels(context);
+    const oldMetas = await source.getModels();
     // @ts-ignore
     const oldTableMetas: Model[] = [];
     const oldViewMetas: Model[] = [];
@@ -226,7 +226,7 @@ export class MetaDiffsService {
         })
       )?.data?.list;
 
-      await oldMeta.getColumns(context);
+      await oldMeta.getColumns();
 
       for (const column of colListRef[table.tn]) {
         const oldColIdx = oldMeta.columns.findIndex(
@@ -336,15 +336,14 @@ export class MetaDiffsService {
     }
 
     for (const relationCol of virtualRelationColumns) {
-      const colOpt = await relationCol.getColOptions<LinkToAnotherRecordColumn>(
-        context,
-      );
-      const parentCol = await colOpt.getParentColumn(context);
-      const childCol = await colOpt.getChildColumn(context);
+      const colOpt =
+        await relationCol.getColOptions<LinkToAnotherRecordColumn>();
+      const parentCol = await colOpt.getParentColumn();
+      const childCol = await colOpt.getChildColumn();
 
       if (!parentCol || !childCol) {
         // Parent or child column is missing - mark relation for removal
-        const ownerModel = await relationCol.getModel(context);
+        const ownerModel = await relationCol.getModel();
         if (ownerModel) {
           const ownerTable = changes.find(
             (t) => t.table_name === ownerModel.table_name,
@@ -363,13 +362,13 @@ export class MetaDiffsService {
         continue;
       }
 
-      const parentModel = await parentCol.getModel(context);
-      const childModel = await childCol.getModel(context);
+      const parentModel = await parentCol.getModel();
+      const childModel = await childCol.getModel();
 
       if (!parentModel || !childModel) {
         // Parent or child model is missing - mark relation for removal
         const ownerModel =
-          parentModel || childModel || (await relationCol.getModel(context));
+          parentModel || childModel || (await relationCol.getModel());
         if (ownerModel) {
           const ownerTable = changes.find(
             (t) => t.table_name === ownerModel.table_name,
@@ -390,7 +389,7 @@ export class MetaDiffsService {
 
       // many to many relation (or any v2 junction-table-based relation)
       if (isMMOrMMLike(relationCol)) {
-        const m2mModel = await colOpt.getMMModel(context);
+        const m2mModel = await colOpt.getMMModel();
 
         if (!m2mModel) {
           // M2M model is missing - mark relation for removal
@@ -465,8 +464,8 @@ export class MetaDiffsService {
             })
           )?.data?.list);
 
-        const m2mChildCol = await colOpt.getMMChildColumn(context);
-        const m2mParentCol = await colOpt.getMMParentColumn(context);
+        const m2mChildCol = await colOpt.getMMChildColumn();
+        const m2mParentCol = await colOpt.getMMParentColumn();
 
         if (
           pColumns.every((c) => c.cn !== parentCol.column_name) ||
@@ -628,7 +627,7 @@ export class MetaDiffsService {
         })
       )?.data?.list;
 
-      await oldMeta.getColumns(context);
+      await oldMeta.getColumns();
 
       for (const column of colListRef[view.tn]) {
         const oldColIdx = oldMeta.columns.findIndex(
@@ -863,7 +862,7 @@ export class MetaDiffsService {
           case MetaDiffType.TABLE_REMOVE:
           case MetaDiffType.VIEW_REMOVE:
             {
-              await change.model.delete(context);
+              await change.model.delete();
             }
             break;
           case MetaDiffType.TABLE_COLUMN_ADD:
@@ -935,11 +934,11 @@ export class MetaDiffsService {
             break;
           case MetaDiffType.TABLE_COLUMN_REMOVE:
           case MetaDiffType.VIEW_COLUMN_REMOVE:
-            await change.column.delete(context);
+            await change.column.delete();
             break;
           case MetaDiffType.TABLE_RELATION_REMOVE:
           case MetaDiffType.TABLE_VIRTUAL_M2M_REMOVE:
-            await change.column.delete(context);
+            await change.column.delete();
             break;
           case MetaDiffType.TABLE_RELATION_ADD:
             {
@@ -966,12 +965,12 @@ export class MetaDiffsService {
                 }
 
                 const parentCol = await parentModel
-                  .getColumns(context)
+                  .getColumns()
                   .then((cols) =>
                     cols.find((c) => c.column_name === change.rcn),
                   );
                 const childCol = await childModel
-                  .getColumns(context)
+                  .getColumns()
                   .then((cols) =>
                     cols.find((c) => c.column_name === change.cn),
                   );
@@ -1038,7 +1037,7 @@ export class MetaDiffsService {
     // populate m2m relations
     await this.extractAndGenerateManyToManyRelations(
       context,
-      await source.getModels(context),
+      await source.getModels(),
     );
 
     logger?.(`Many to many relation changes applied`);
@@ -1105,12 +1104,10 @@ export class MetaDiffsService {
   ) {
     let isExist = false;
     const colChildOpt =
-      await belongsToCol.getColOptions<LinkToAnotherRecordColumn>(context);
-    for (const col of await model.getColumns(context)) {
+      await belongsToCol.getColOptions<LinkToAnotherRecordColumn>();
+    for (const col of await model.getColumns()) {
       if (isLinksOrLTAR(col.uidt)) {
-        const colOpt = await col.getColOptions<LinkToAnotherRecordColumn>(
-          context,
-        );
+        const colOpt = await col.getColOptions<LinkToAnotherRecordColumn>();
         if (
           colOpt &&
           isMMOrMMLike(col) &&
@@ -1132,7 +1129,7 @@ export class MetaDiffsService {
     modelsArr: Array<Model>,
   ) {
     for (const assocModel of modelsArr) {
-      await assocModel.getColumns(context);
+      await assocModel.getColumns();
       // check if table is a Bridge table(or Associative Table) by checking
       // number of foreign keys and columns
 
@@ -1140,9 +1137,7 @@ export class MetaDiffsService {
       const belongsToCols: Column<LinkToAnotherRecordColumn>[] = [];
       for (const col of assocModel.columns) {
         if (col.uidt == UITypes.LinkToAnotherRecord) {
-          const colOpt = await col.getColOptions<LinkToAnotherRecordColumn>(
-            context,
-          );
+          const colOpt = await col.getColOptions<LinkToAnotherRecordColumn>();
           if (colOpt?.type === RelationTypes.BELONGS_TO)
             belongsToCols.push(col);
         }
@@ -1160,20 +1155,16 @@ export class MetaDiffsService {
           continue;
         }
 
-        const modelA = await belongsToCols[0].colOptions.getRelatedTable(
-          context,
-        );
-        const modelB = await belongsToCols[1].colOptions.getRelatedTable(
-          context,
-        );
+        const modelA = await belongsToCols[0].colOptions.getRelatedTable();
+        const modelB = await belongsToCols[1].colOptions.getRelatedTable();
 
         if (!modelA || !modelB) {
           // Skip if related models are missing (deleted or corrupted data)
           continue;
         }
 
-        await modelA.getColumns(context);
-        await modelB.getColumns(context);
+        await modelA.getColumns();
+        await modelB.getColumns();
 
         // check tableA already have the relation or not
         const isRelationAvailInA = await this.isMMRelationExist(
@@ -1243,19 +1234,18 @@ export class MetaDiffsService {
         // mark has many relation associated with mm as system field in both table
         for (const btCol of [belongsToCols[0], belongsToCols[1]]) {
           const colOpt = await btCol.colOptions;
-          const model = await colOpt.getRelatedTable(context);
+          const model = await colOpt.getRelatedTable();
 
           if (!model) {
             // Skip if related model is missing
             continue;
           }
 
-          for (const col of await model.getColumns(context)) {
+          for (const col of await model.getColumns()) {
             if (!isLinksOrLTAR(col.uidt)) continue;
 
-            const colOpt1 = await col.getColOptions<LinkToAnotherRecordColumn>(
-              context,
-            );
+            const colOpt1 =
+              await col.getColOptions<LinkToAnotherRecordColumn>();
             if (!colOpt1 || colOpt1.type !== RelationTypes.HAS_MANY) continue;
 
             if (

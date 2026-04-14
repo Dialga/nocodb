@@ -216,11 +216,11 @@ export class ExportService {
         );
       }
 
-      await model.getColumns(context);
+      await model.getColumns();
 
       model.columns = this.filterOutCrossBaseColumns(model);
 
-      await model.getViews(context);
+      await model.getViews();
 
       // if views are excluded, filter all views except default
       const firstView = getFirstNonPersonalView(model.views, {
@@ -243,7 +243,7 @@ export class ExportService {
       }
 
       for (const column of model.columns) {
-        await column.getColOptions(context);
+        await column.getColOptions();
 
         // if data is not excluded, get currval for ai column (pg)
         if (!excludeData) {
@@ -423,9 +423,9 @@ export class ExportService {
 
       for (const view of model.views) {
         idMap.set(view.id, `${idMap.get(model.id)}::${view.id}`);
-        await view.getColumns(context);
-        await view.getFilters(context);
-        await view.getSorts(context);
+        await view.getColumns();
+        await view.getFilters();
+        await view.getSorts();
         if (view.filter) {
           const export_filters = [];
           for (const fl of view.filter.children) {
@@ -824,7 +824,7 @@ export class ExportService {
 
     const source = await Source.get(context, model.source_id);
 
-    await model.getColumns(context);
+    await model.getColumns();
 
     if (!param.includeCrossBaseColumns) {
       model.columns = this.filterOutCrossBaseColumns(model);
@@ -842,7 +842,7 @@ export class ExportService {
             (col.colOptions?.type === RelationTypes.ONE_TO_ONE &&
               col.meta?.bt)),
       )) {
-        await column.getColOptions(context);
+        await column.getColOptions();
         const fkCol = model.columns.find(
           (c) => c.id === column.colOptions?.fk_child_column_id,
         );
@@ -882,7 +882,7 @@ export class ExportService {
       return;
     }
 
-    const viewCols = await refView.getColumns(context);
+    const viewCols = await refView.getColumns();
     if (dataExportMode) {
       const hideSystemFields = refView.show_system_fields
         ? // at minimum filter mm fields used in Links field
@@ -1094,7 +1094,7 @@ export class ExportService {
 
         const mmModel = await Model.get(context, mm.colOptions?.fk_mm_model_id);
 
-        await mmModel.getColumns(context);
+        await mmModel.getColumns();
 
         mmModel.columns = this.filterOutCrossBaseColumns(mmModel);
 
@@ -1196,7 +1196,7 @@ export class ExportService {
 
     const source = await Source.get(context, model.source_id);
 
-    await model.getColumns(context);
+    await model.getColumns();
 
     if (!param.includeCrossBaseColumns) {
       model.columns = this.filterOutCrossBaseColumns(model);
@@ -1215,7 +1215,7 @@ export class ExportService {
     const refView =
       view ?? (await View.getFirstCollaborativeView(context, model.id));
 
-    const viewCols = await refView.getColumns(context);
+    const viewCols = await refView.getColumns();
 
     const hideSystemFields = view.show_system_fields
       ? // at minimum filter mm fields used in Links field
@@ -1331,7 +1331,7 @@ export class ExportService {
 
     const source = await Source.get(context, model.source_id);
 
-    await model.getColumns(context);
+    await model.getColumns();
 
     if (!param.includeCrossBaseColumns) {
       model.columns = this.filterOutCrossBaseColumns(model);
@@ -1342,7 +1342,7 @@ export class ExportService {
     const refView =
       view ?? (await View.getFirstCollaborativeView(context, model.id));
 
-    const viewCols = await refView.getColumns(context);
+    const viewCols = await refView.getColumns();
 
     const hideSystemFields = view.show_system_fields
       ? model.columns
@@ -1791,7 +1791,7 @@ export class ExportService {
 
     const base = await Base.get(context, source.base_id);
 
-    const models = (await source.getModels(context)).filter(
+    const models = (await source.getModels()).filter(
       // TODO revert this when issue with cache is fixed
       (m) => m.source_id === source.id && !m.mm && m.type === 'table',
     );
