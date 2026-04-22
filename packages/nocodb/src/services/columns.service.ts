@@ -4961,6 +4961,7 @@ export class ColumnsService implements IColumnsService {
       readonly?: boolean;
       meta?: Record<string, any>;
       ref_base_id?: string;
+      fk_display_value_column_id?: string | null;
     };
 
     const relationType = ltarReq.type;
