@@ -8,6 +8,7 @@ import {
   LongTextAiMetaProp as _LongTextAiMetaProp,
   checkboxIconList,
   isAIPromptCol,
+  isColumnInError,
   isLinksOrLTAR,
   isSystemColumn,
   isValidURL,
@@ -317,6 +318,12 @@ const isColumnInvalid = ({
   switch (col.uidt) {
     case UITypes.Formula:
       result.isInvalid = !!(col.colOptions as FormulaType).error
+      break
+    case UITypes.Lookup:
+    case UITypes.Rollup:
+    case UITypes.QrCode:
+    case UITypes.Barcode:
+      result.isInvalid = isColumnInError(col)
       break
     case UITypes.Button: {
       const colOptions = col.colOptions as ButtonType

@@ -69,6 +69,7 @@ export enum JobTypes {
   ChatMessage = 'chat-message',
   ChatApproval = 'chat-approval',
   RecordTrashCleanup = 'record-trash-cleanup',
+  BaseTrashCleanUp = 'base-trash-clean-up',
 }
 
 export const SKIP_STORING_JOB_META = [
@@ -84,6 +85,7 @@ export const SKIP_STORING_JOB_META = [
   JobTypes.ReseatSubscription,
   JobTypes.WorkflowCronSchedule,
   JobTypes.WorkflowResumeSchedule,
+  JobTypes.BaseTrashCleanUp,
   JobTypes.ResumeWorkflow,
   JobTypes.HeartbeatWorkflow,
   JobTypes.PollWorkflow,
